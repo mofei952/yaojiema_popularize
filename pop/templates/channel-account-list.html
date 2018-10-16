@@ -1,0 +1,202 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>渠道订单管理</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport"
+          content="width=device-width,user-scalable=yes, minimum-scale=0.4, initial-scale=0.8,target-densitydpi=low-dpi"/>
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon"/>
+    <link rel="stylesheet" href="{% static 'css/font.css' %}">
+    <link rel="stylesheet" href="{% static 'css/xadmin.css' %}">
+    <script type="text/javascript" src="{% static 'js/jquery-3.3.1.js' %}"></script>
+    <script type="text/javascript" src="{% static 'lib/layui/layui.js' %}" charset="utf-8"></script>
+    <script type="text/javascript" src="{% static 'js/xadmin.js' %}"></script>
+    <!-- 让IE8/9支持媒体查询，从而兼容栅格 -->
+    <!--[if lt IE 9]>
+      <script src="https://cdn.staticfile.org/html5shiv/r29/html5.min.js"></script>
+      <script src="https://cdn.staticfile.org/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+</head>
+
+<body class="layui-anim layui-anim-up">
+
+<div class="x-nav">
+      <span class="layui-breadcrumb">
+        <a href="">首页</a>
+        <a href="">渠道账号管理</a>
+        <a>
+          <cite>渠道账号列表</cite></a>
+      </span>
+    <a class="layui-btn layui-btn-small" style="line-height:1.6em;margin-top:3px;float:right" href="javascript:location.replace(location.href);" title="刷新">
+        <i class="layui-icon" style="line-height:30px">ဂ</i>
+    </a>
+</div>
+<div class="x-body">
+    <xblock>
+        <button class="layui-btn layui-btn-danger" onclick="account_batch_del()"><i class="layui-icon"></i>批量删除</button>
+        <button class="layui-btn" onclick="x_admin_show('添加用户','{% url 'channel_account_add' %}',600,450)">
+            <i class="layui-icon"></i>添加
+        </button>
+        <span class="x-right" style="line-height:40px">共有数据：{{ channel_account_list.paginator.count }} 条</span>
+    </xblock>
+    <table class="layui-table">
+        <thead>
+        <tr>
+            <th>
+                <div class="layui-unselect header layui-form-checkbox" lay-skin="primary"><i
+                        class="layui-icon">&#xe605;</i></div>
+            </th>
+            <th>ID</th>
+            <th>账号</th>
+            <th>推广人名称</th>
+{#            <th>密码</th>#}
+            <th>对应的渠道</th>
+            <th>推广链接</th>
+            <th>加入时间</th>
+            <th>状态</th>
+            <th>操作</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for account in channel_account_list %}
+            <tr>
+                <td>
+                    <div class="layui-unselect layui-form-checkbox" lay-skin="primary" data-id='{{ account.id }}'><i
+                            class="layui-icon">&#xe605;</i>
+                    </div>
+                </td>
+                <td>{{ account.id }}</td>
+                <td>{{ account.username }}</td>
+                <td>{{ account.real_name }}</td>
+{#                <td>{{ channel_account.password }}</td>#}
+                <td>{{ account.channel.name }}</td>
+                <td>
+                    {% if account.channel %}
+                        http://{{ request.environ.HTTP_HOST }}{% url 'channel_promotion' account.channel.code %}
+                    {% endif %}
+                </td>
+                <td>{{ account.create_at }}</td>
+                <td class="td-status">
+                    <span class="layui-btn layui-btn-normal layui-btn-mini {% if account.state == 'STOP' %}layui-btn-disabled{% endif %}">{{ account.get_state_display }}</span>
+                </td>
+                <td class="td-manage">
+                    <a onclick="account_stop(this,'{{ account.id }}')" href="javascript:;" title="{% if account.state == 'STOP' %}启用{% else %}停用{% endif %}">
+                        <i class="layui-icon">{% if account.state == 'STOP' %}&#xe62f;{% else %}&#xe601;{% endif %}</i>
+                    </a>
+                    <a title="编辑" onclick="x_admin_show('编辑','{% url 'channel_account_edit' account.id %}',600,400)" href="javascript:;">
+                        <i class="layui-icon">&#xe642;</i>
+                    </a>
+                    <a onclick="x_admin_show('修改密码','{% url 'channel_account_modify_password' account.id %}',600,400)" title="修改密码" href="javascript:;">
+                        <i class="layui-icon">&#xe631;</i>
+                    </a>
+                    {% if account.channel %}
+                        <a title="删除" onclick="account_del(this,'{{ account.id }}')" href="javascript:;">
+                            <i class="layui-icon">&#xe640;</i>
+                        </a>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <div class="page">
+        <div>
+            {% load extra_tags %}
+            {% get_display_page_range channel_account_list.paginator.num_pages channel_account_list.number as display_page_range %}
+            <a class="prev"
+               {% if channel_account_list.has_previous %}href="{% url 'channel_account_list' channel_account_list.number|add:-1 %}"{% endif %}>&lt;&lt;</a>
+            {% if display_page_range|first != 1 %}
+                <span>...</span>
+            {% endif %}
+            {% for p in display_page_range %}
+                {% if channel_account_list.number == p %}
+                    <span class="current">{{ p }}</span>
+                {% else %}
+                    <a class="num" href="{% url 'channel_account_list' p %}">{{ p }}</a>
+                {% endif %}
+            {% endfor %}
+            {% if display_page_range|last != channel_account_list.paginator.num_pages %}
+                <span>...</span>
+            {% endif %}
+            <a class="next"
+               {% if channel_account_list.has_next %}href="{% url 'channel_account_list' channel_account_list.number|add:1 %}"{% endif %}>&gt;&gt;</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    $.ajaxSetup({
+        data: {csrfmiddlewaretoken: '{{ csrf_token }}'},
+    });
+
+    /*账号-停用启用*/
+    function account_stop(obj, id) {
+        if ($(obj).attr('title') == '停用') {
+            layer.confirm('确认要停用吗？', function (index) {
+                $.getJSON('/channel_account_change_state/' + id + '/' + 'STOP', function (result) {
+                    if (result.code == 'ACK') {
+                        $(obj).attr('title', '启用')
+                        $(obj).find('i').html('&#xe62f;');
+
+                        $(obj).parents("tr").find(".td-status").find('span').addClass('layui-btn-disabled').html('已停用');
+                        layer.msg('已停用!', {icon: 1, time: 1000});
+                    } else {
+                        layer.msg(result.msg, {icon: 2, time: 1000});
+                    }
+
+                })
+            })
+        } else {
+            layer.confirm('确认要启用吗？', function (index) {
+                $.getJSON('/channel_account_change_state/' + id + '/' + 'START', function (result) {
+                    if (result.code == 'ACK') {
+                        $(obj).attr('title', '停用')
+                        $(obj).find('i').html('&#xe601;');
+
+                        $(obj).parents("tr").find(".td-status").find('span').removeClass('layui-btn-disabled').html('已启用');
+                        layer.msg('已启用!', {icon: 1, time: 1000});
+                    } else {
+                        layer.msg(result.msg, {icon: 2, time: 1000});
+                    }
+
+                })
+            })
+        }
+    }
+
+    /*账号-删除*/
+    function account_del(obj, id) {
+        layer.confirm('确认要删除吗？', function (index) {
+            $.post('/channel_account_delete', {ids: JSON.stringify([id])}, function (result) {
+                if (result.code == 'ACK') {
+                    $(obj).parents("tr").remove();
+                    layer.msg('已删除!', {icon: 1, time: 1000});
+                } else {
+                    layer.msg(result.msg, {icon: 2, time: 1000})
+                }
+            })
+        });
+    }
+
+    /*账号-批量删除*/
+    function account_batch_del(argument) {
+        var data = tableCheck.getData();
+        layer.confirm('确认要删除吗？' + data, function (index) {
+            $.post('/channel_account_delete', {ids: JSON.stringify(data)}, function (result) {
+                if (result.code == 'ACK') {
+                    layer.msg('删除成功', {icon: 1, time: 1000});
+                    $(".layui-form-checked").not('.header').parents('tr').remove();
+                } else {
+                    layer.msg(result.msg, {icon: 2, time: 1000})
+                }
+            })
+        });
+    }
+</script>
+
+</body>
+</html>

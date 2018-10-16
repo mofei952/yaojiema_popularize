@@ -1,0 +1,206 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title></title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,maximum-scale=1, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="stylesheet" href="{% static 'css/mui.min.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/base.css' %}"/>
+    <link rel="stylesheet" type="text/css" href="{% static 'css/member.css' %}"/>
+    <link rel="stylesheet" href="{% static 'css/font.css' %}">
+    <link rel="stylesheet" href="{% static 'css/xadmin.css' %}">
+    <style>
+        html {
+            height: 100%;
+        }
+
+        body {
+            width: 100%;
+            min-height: 100%;
+            background: #2949f8 url({% static 'images/bg2.jpg' %}) no-repeat;
+            background-size: 100%;
+            /* margin: auto; */
+            /*position: absolute;*/
+            overflow: auto;
+        }
+
+        .mui-content {
+            margin: 0 auto;
+            padding-top: 72%;
+            width: 80%;
+
+        }
+    </style>
+    <script type="text/javascript" src="{% static 'js/mui.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/jquery-3.3.1.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/jquery-3.3.1.js' %}"></script>
+    <script type="text/javascript" src="{% static 'lib/layui/layui.js' %}" charset="utf-8"></script>
+    <script type="text/javascript" src="{% static 'js/xadmin.js' %}"></script>
+</head>
+
+<body>
+
+<div class="mui-content">
+    <form class="layui-form">
+        {% csrf_token %}
+        <div class="reg-box">
+            <div class="mui-input-row ">
+                <input type="text" class="mui-input-clear" placeholder="手机号" id="tel" name="tel" lay-verify="required">
+            </div>
+            <div class="mui-input-row ">
+                <input type="text" placeholder="短信验证码" name="verification_code" lay-verify="required">
+                <span class="unit">
+                    <a class="szyz" id="code" onclick="sendVerificationCode()">获取验证码</a>
+                </span>
+            </div>
+            <div class="mui-input-row ">
+                <input type="password" class="mui-input-password" placeholder="密码" name="password" lay-verify="required">
+			</div>
+        </div>
+        <a class="log-btn" href="" lay-filter="add" lay-submit="">注册</a>
+        <div class="protocol">
+            <a href="javascript:void(0);" class="active">
+                <i></i>同意
+            </a>
+            <a href="http://baidu.com">《用户注册协议》</a>
+        </div>
+    </form>
+</div>
+
+
+<script>
+    var browser = {
+        versions: function () {
+            var u = navigator.userAgent, app = navigator.appVersion;
+            return {//移动终端浏览器版本信息
+                trident: u.indexOf('Trident') > -1, //IE内核
+                presto: u.indexOf('Presto') > -1, //opera内核
+                webKit: u.indexOf('AppleWebKit') > -1, //苹果、谷歌内核
+                gecko: u.indexOf('Gecko') > -1 && u.indexOf('KHTML') == -1, //火狐内核
+                mobile: !!u.match(/AppleWebKit.*Mobile/i) || !!u.match(/MIDP|SymbianOS|NOKIA|SAMSUNG|LG|NEC|TCL|Alcatel|BIRD|DBTEL|Dopod|PHILIPS|HAIER|LENOVO|MOT-|Nokia|SonyEricsson|SIE-|Amoi|ZTE/), //是否为移动终端
+                ios: !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/), //ios终端
+                android: u.indexOf('Android') > -1 || u.indexOf('Linux') > -1, //android终端或者uc浏览器
+                iPhone: u.indexOf('iPhone') > -1 || u.indexOf('Mac') > -1, //是否为iPhone或者QQHD浏览器
+                iPad: u.indexOf('iPad') > -1, //是否iPad
+                webApp: u.indexOf('Safari') == -1 //是否web应该程序，没有头部与底部
+            };
+        }(),
+        language: (navigator.browserLanguage || navigator.language).toLowerCase()
+    }
+
+
+    // 是否为微信
+    function is_weixn() {
+        var ua = navigator.userAgent.toLowerCase();
+        if (ua.match(/MicroMessenger/i) == "micromessenger") {
+            alert('微信请在右上角浏览器中打开');
+        } else {
+            return false;
+        }
+    }
+
+    var times = 60, cuttime;
+
+    function code(idn) {
+        times--;
+        if (times > 0 && times < 60) {
+            $(idn).text(times + "秒后重新获取");
+            $(idn).addClass("gray");
+            cuttime = setTimeout(function () {
+                code(idn)
+            }, 1000);
+        }
+        else {
+            $(idn).text("发送验证码");
+            times = 60;
+            $(idn).removeClass("gray");
+            clearTimeout(cuttime);
+        }
+    }
+
+    $(function () {
+        $("#code").bind("tap", function () {
+            if (times == 60) {
+                code("#code");
+            }
+            return false;
+        });
+    });
+
+
+    $(".protocol a").bind("tap", function () {
+        if ($(this).hasClass('active'))
+            $(this).removeClass('active');
+        else $(this).addClass('active');
+    });
+
+    $.ajaxSetup({
+        data: {csrfmiddlewaretoken: '{{ csrf_token }}'},
+    });
+
+    function jump() {
+        if (browser.versions.iPhone || browser.versions.iPad || browser.versions.ios) {//苹果版
+            window.location.href = "https://itunes.apple.com/us/app/bei-jing-xin-xi-wang-huo-dong/id1097486612?mt=8";
+            is_weixn();//苹果微信不自动跳转浏览器
+        }
+        if (browser.versions.android) {//安卓
+            window.location.href = 'https://imtt.dd.qq.com/16891/1441780CB865AD65AEDB2DD07251B2E6.apk?fsname=com.hzgxr.yjm_4.0_40.apk&csr=1bbd';
+        }
+    }
+
+    function sendVerificationCode() {
+        tel = $('#tel').val().trim()
+        $.post('{% url 'send_verification_code_sms' %}',{'tel':tel},function (result) {
+            console.log(result.code, result.msg)
+            if(result.code == 'ACK'){
+                layer.msg("发送成功", {icon: 1, time: 1000})
+            }else{
+                if(result.msg == '用户已经存在'){
+                    layer.msg(result.msg, {icon: 1, time: 1000}, function () {
+                        jump()
+                    })
+                }else{
+                    layer.alert(result.msg, {icon: 2})
+                }
+            }
+        }, 'json')
+    }
+
+    layui.use(['form', 'layer'], function () {
+        $ = layui.jquery;
+        var form = layui.form, layer = layui.layer;
+
+        //监听提交
+        form.on('submit(add)', function (data) {
+            if (!$('.protocol a:eq(0)').hasClass('active')){
+                layer.alert('请同意用户注册协议！', {icon: 2})
+                return false;
+            }
+            $.post('', data.field, function (result) {
+                console.log(result)
+                if (result.code == 'ACK') {
+                    layer.msg("注册成功", {icon: 1, time: 1000}, function () {
+                        jump()
+                    });
+                } else {
+                    if(result.msg == '用户已经存在'){
+                        layer.msg(result.msg, {icon: 1, time: 1000}, function () {
+                            jump()
+                        })
+                    }else{
+                        layer.alert(result.msg, {icon: 2})
+                    }
+                }
+            })
+            return false;
+        });
+    });
+
+</script>
+
+</body>
+</html>

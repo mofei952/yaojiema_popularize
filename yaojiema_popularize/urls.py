@@ -24,6 +24,7 @@ urlpatterns = [
     # path('admin/', admin.site.urls),
     path('login', views.LoginView.as_view(), name='login'),
     path('', views.IndexView.as_view(), name='index'),
+    path('logout', views.LogoutView.as_view(), name='logout'),
     path('welcome', views.WelcomeView.as_view(), name='welcome'),
     path('channel_list', views.ChannelListView.as_view(), name='channel_list'),
     path('channel_list/<int:page>', views.ChannelListView.as_view(), name='channel_list'),

@@ -48,6 +48,7 @@ MIDDLEWARE = [
     # 'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'pop.middleware.RequestMiddleware'
 ]
 
 ROOT_URLCONF = 'yaojiema_popularize.urls'

@@ -17,6 +17,7 @@ from django.views import View
 from pytz import utc
 
 from pop import user_db, sms_api
+from pop.decorators import login_required
 from pop.forms import LoginForm, ChannelAccountAddForm, ChannelAccountEditForm, ChannelAccountModifyPasswordForm
 from pop.models import Channel, ChannelAccount, ChannelOrder, Sms
 
@@ -62,12 +63,19 @@ class LoginView(View):
 
 
 class IndexView(View):
+    @login_required()
     def get(self, request):
         level = request.session['user']['level']
         if level == 'ADMIN':
             return render(request, 'index.html')
         else:
             return render(request, 'channel-account-index.html')
+
+
+class LogoutView(View):
+    def get(self, request):
+        request.session.clear()
+        return redirect(reverse('login'))
 
 
 class WelcomeView(View):
@@ -85,6 +93,7 @@ class WelcomeView(View):
 
 
 class ChannelListView(View):
+    @login_required(admin=True)
     def get(self, request, page=1):
         channel_list = Channel.objects.order_by('-create_at')
         paginator = Paginator(channel_list, 15)
@@ -96,9 +105,11 @@ class ChannelListView(View):
 
 
 class ChannelAddView(View):
+    @login_required(admin=True)
     def get(self, request):
         return render(request, 'channel-add.html')
 
+    @login_required(admin=True)
     def post(self, request):
         name = request.POST.get('name')
         if not name:
@@ -111,10 +122,12 @@ class ChannelAddView(View):
 
 
 class ChannelEditView(View):
+    @login_required(admin=True)
     def get(self, request, id):
         channel = Channel.objects.get(id=id)
         return render(request, 'channel-edit.html', {'channel': channel})
 
+    @login_required(admin=True)
     def post(self, request, id):
         name = request.POST.get('name')
         if not name:
@@ -126,11 +139,12 @@ class ChannelEditView(View):
 
 
 class ChannelDeleteView(View):
+    @login_required(admin=True)
     def post(self, request):
         ids = json.loads(request.POST.get('ids'))
         error_dict = {
-            'has_account':[],
-            'has_order':[]
+            'has_account': [],
+            'has_order': []
         }
         for id in ids:
             accounts = ChannelAccount.objects.filter(channel_id=id)
@@ -153,6 +167,7 @@ class ChannelDeleteView(View):
 
 
 class ChannelAccountListView(View):
+    @login_required(admin=True)
     def get(self, request, page=1):
         channel_account_list = ChannelAccount.objects.order_by('-create_at')
         paginator = Paginator(channel_account_list, 15)
@@ -161,10 +176,12 @@ class ChannelAccountListView(View):
 
 
 class ChannelAccountAddView(View):
+    @login_required(admin=True)
     def get(self, request):
         channel_list = Channel.objects.order_by('-create_at')
         return render(request, 'channel-account-add.html', {'channel_list': channel_list})
 
+    @login_required(admin=True)
     def post(self, request):
         form = ChannelAccountAddForm(request.POST)
         if not form.is_valid():
@@ -175,6 +192,7 @@ class ChannelAccountAddView(View):
 
 
 class ChannelAccountChangeStateView(View):
+    @login_required(admin=True)
     def get(self, request, id, state):
         if state not in (ChannelAccount.START, ChannelAccount.STOP):
             return response_error('状态错误')
@@ -183,11 +201,13 @@ class ChannelAccountChangeStateView(View):
 
 
 class ChannelAccountEditView(View):
+    @login_required(admin=True)
     def get(self, request, id):
         account = ChannelAccount.objects.get(id=id)
         channel_list = Channel.objects.order_by('-create_at')
         return render(request, 'channel-account-edit.html', {'account': account, 'channel_list': channel_list})
 
+    @login_required(admin=True)
     def post(self, request, id):
         account = ChannelAccount.objects.get(id=id)
         if not account:
@@ -200,10 +220,12 @@ class ChannelAccountEditView(View):
 
 
 class ChannelAccountModifyPasswordView(View):
+    @login_required(admin=True)
     def get(self, request, id):
         account = ChannelAccount.objects.get(id=id)
         return render(request, 'channel-account-password.html', {'account': account})
 
+    @login_required(admin=True)
     def post(self, request, id):
         account = ChannelAccount.objects.get(id=id)
         if not account:
@@ -217,6 +239,7 @@ class ChannelAccountModifyPasswordView(View):
 
 
 class ChannelAccountDeleteView(View):
+    @login_required(admin=True)
     def post(self, request):
         ids = json.loads(request.POST.get('ids'))
         ChannelAccount.objects.filter(id__in=ids).delete()

@@ -38,13 +38,13 @@ class ChannelAccount(TimeStampModel):
     username = models.CharField(max_length=50, unique=True)
     password = models.CharField(max_length=255)
     real_name = models.CharField(max_length=50)
-    level = models.CharField(max_length=10, choices=LEVEL_CHOICES, default=NORMAL)
+    category = models.CharField(max_length=10, choices=LEVEL_CHOICES, default=NORMAL)
     channel = models.ForeignKey(Channel, models.CASCADE, null=True)
     state = models.CharField(max_length=10, choices=STATE_CHOICES, default=START)
 
     def to_dict(self):
         return {'id': self.id, 'username': self.username, 'real_name': self.real_name,
-                'level': self.level, 'channel_id': self.channel.id if self.channel else ''}
+                'level': self.category, 'channel_id': self.channel.id if self.channel else ''}
 
 
 class ChannelOrder(TimeStampModel):

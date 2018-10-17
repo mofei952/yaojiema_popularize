@@ -285,7 +285,7 @@ class ChannelPromotionView(View):
     def post(self, request, code):
         tel = request.POST.get('tel')
         verification_code = request.POST.get('verification_code')
-        password = request.POST.get('password')
+        # password = request.POST.get('password')
         channel = Channel.objects.filter(code=code).first()
         if not channel:
             return response_error('渠道code错误')
@@ -298,7 +298,7 @@ class ChannelPromotionView(View):
         # 判断短信是否发送
         sms = Sms.objects.filter(tel=tel).order_by('-send_time').first()
         now = datetime.datetime.utcnow().replace(tzinfo=utc)
-        if not sms:
+        if not sms or sms.state == Sms.SEND_FAIL:
             return response_error('短信未发送')
         # 判断当前时间时间是否超过短信有效时间
         if now > sms.valid_time:
@@ -312,7 +312,7 @@ class ChannelPromotionView(View):
             sms.save()
             return response_error('验证码错误，请5秒后重新验证')
         # 添加用户
-        user_id = user_db.add_user(tel, password)
+        user_id = user_db.add_user(tel)
         # 添加渠道订单
         ChannelOrder.objects.create(channel=channel, user_id=user_id)
         return response_success()
@@ -333,12 +333,12 @@ class SendVerificationCodeSmsView(View):
             return response_error('两次发送验证码间隔小于60秒')
         # 生成验证码，短信内容
         verification_code = '%06d' % random.randint(0, 999999)
-        text = '【要借吗】您的验证码是%s' % verification_code
+        text = '您的验证码是%s' % verification_code
         state = Sms.SEND_FAIL
         # 调用发送短信接口，判断是否发送成功，修改state
-        # response = sms_api.send_sms(text, tel)
-        response = '20110725160412,0\n1234567890100'
-        result = re.split(r'\s|,', response)
+        response = sms_api.send_sms(text, tel)
+        # response = b'20110725160412,0\n1234567890100'
+        result = re.split(r'\\n|,', str(response.decode('utf-8')))
         if result[1] == '0':
             state = Sms.SEND_SUCCESS
         # 存入数据库以便验证时比较

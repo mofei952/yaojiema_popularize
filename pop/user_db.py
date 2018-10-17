@@ -34,9 +34,9 @@ def get_by_tel(tel):
     return user
 
 
-def add_user(tel, password):
+def add_user(tel, password=''):
     timestamp = int(time.time())
-    password = hashlib.md5((tel+str(timestamp)+password).encode('utf8')).hexdigest()
+    # password = hashlib.md5((tel+str(timestamp)+password).encode('utf8')).hexdigest()
     cursor = connection.cursor()
     cursor.execute("insert into user(user_group_id,username,password,nickname,real_name," +
                    "qq_number,wangwang_number,weixin,email,add_time," +

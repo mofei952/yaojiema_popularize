@@ -7,11 +7,9 @@ import datetime
 import re
 from django.contrib.auth.hashers import check_password, make_password
 from django.core.paginator import Paginator
-from django.forms import forms
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
 
-# Create your views here.
 from django.urls import reverse
 from django.views import View
 from pytz import utc
@@ -23,6 +21,7 @@ from pop.models import Channel, ChannelAccount, ChannelOrder, Sms
 
 
 def errors_to_msg(errors):
+    """将error字典转化为字符串，只获取第一个错误"""
     error = ''
     for key, err_list in errors.items():
         for err in err_list:
@@ -33,26 +32,29 @@ def errors_to_msg(errors):
 
 
 def response_success(data=None):
+    """返回成功的Response"""
     return JsonResponse({'code': 'ACK', 'data': data})
 
 
 def response_error(msg=None):
+    """返回失败的response"""
     return JsonResponse({'code': 'NACK', 'msg': msg})
 
 
 class LoginView(View):
     def get(self, request):
+        """跳转到登录页面"""
         login_form = LoginForm()
         return render(request, 'login.html', {'form': login_form})
 
     def post(self, request):
+        """ajax登录请求"""
         login_form = LoginForm(request.POST)
         if not login_form.is_valid():
             return response_error(errors_to_msg(login_form.errors))
         data = login_form.cleaned_data
         username = data.get('username')
         password = data.get('password')
-        make_password('admin')
         account = ChannelAccount.objects.filter(username=username).first()
         if not account or not check_password(password, account.password):
             return response_error('用户名或密码错误')
@@ -65,6 +67,7 @@ class LoginView(View):
 class IndexView(View):
     @login_required()
     def get(self, request):
+        """跳转到首页，admin跳转index，normal跳转channel-account-index"""
         level = request.session['user']['level']
         if level == 'ADMIN':
             return render(request, 'index.html')
@@ -73,15 +76,22 @@ class IndexView(View):
 
 
 class LogoutView(View):
+    @login_required()
     def get(self, request):
+        """登出，清除session"""
         request.session.clear()
         return redirect(reverse('login'))
 
 
 class WelcomeView(View):
+    @login_required()
     def get(self, request):
+        """
+            跳转到欢迎页，显示统计信息，
+            若等级为admin，显示渠道数量，渠道账号数量，渠道订单数量，
+            若等级为normal，只显示当前用户所属的渠道的订单数量
+        """
         if request.session['user']['level'] == 'ADMIN':
-
             channel_count = Channel.objects.count()
             account_count = ChannelAccount.objects.count()
             order_count = ChannelOrder.objects.count()
@@ -95,22 +105,22 @@ class WelcomeView(View):
 class ChannelListView(View):
     @login_required(admin=True)
     def get(self, request, page=1):
+        """跳转到渠道列表页面，只有admin有权限"""
         channel_list = Channel.objects.order_by('-create_at')
         paginator = Paginator(channel_list, 15)
         channel_list = paginator.get_page(page)
         return render(request, 'channel-list.html', {'channel_list': channel_list})
 
-    def post(self):
-        pass
-
 
 class ChannelAddView(View):
     @login_required(admin=True)
     def get(self, request):
+        """跳转到渠道添加页面"""
         return render(request, 'channel-add.html')
 
     @login_required(admin=True)
     def post(self, request):
+        """ajax渠道添加处理"""
         name = request.POST.get('name')
         if not name:
             return response_error('渠道名称不能为空')
@@ -118,17 +128,19 @@ class ChannelAddView(View):
             return response_error('渠道已存在')
         code = uuid.uuid4()
         Channel.objects.create(name=name, code=code)
-        return response_success('%s/promotion?code=%s' % (request.environ['HTTP_ORIGIN'], code))
+        return response_success()
 
 
 class ChannelEditView(View):
     @login_required(admin=True)
     def get(self, request, id):
+        """跳转到渠道编辑页面"""
         channel = Channel.objects.get(id=id)
         return render(request, 'channel-edit.html', {'channel': channel})
 
     @login_required(admin=True)
     def post(self, request, id):
+        """ajax渠道编辑处理"""
         name = request.POST.get('name')
         if not name:
             return response_error('渠道名称不能为空')
@@ -141,6 +153,7 @@ class ChannelEditView(View):
 class ChannelDeleteView(View):
     @login_required(admin=True)
     def post(self, request):
+        """ajax渠道删除处理，可以批量"""
         ids = json.loads(request.POST.get('ids'))
         error_dict = {
             'has_account': [],
@@ -169,6 +182,7 @@ class ChannelDeleteView(View):
 class ChannelAccountListView(View):
     @login_required(admin=True)
     def get(self, request, page=1):
+        """跳转到渠道账号列表页面"""
         channel_account_list = ChannelAccount.objects.order_by('-create_at')
         paginator = Paginator(channel_account_list, 15)
         channel_account_list = paginator.get_page(page)
@@ -178,11 +192,13 @@ class ChannelAccountListView(View):
 class ChannelAccountAddView(View):
     @login_required(admin=True)
     def get(self, request):
+        """跳转到渠道账号添加页面"""
         channel_list = Channel.objects.order_by('-create_at')
         return render(request, 'channel-account-add.html', {'channel_list': channel_list})
 
     @login_required(admin=True)
     def post(self, request):
+        """ajax渠道账号添加处理"""
         form = ChannelAccountAddForm(request.POST)
         if not form.is_valid():
             return response_error(errors_to_msg(form.errors))
@@ -194,6 +210,7 @@ class ChannelAccountAddView(View):
 class ChannelAccountChangeStateView(View):
     @login_required(admin=True)
     def get(self, request, id, state):
+        """ajax渠道账号修改状态处理"""
         if state not in (ChannelAccount.START, ChannelAccount.STOP):
             return response_error('状态错误')
         ChannelAccount.objects.filter(id=id).update(state=state)
@@ -203,12 +220,14 @@ class ChannelAccountChangeStateView(View):
 class ChannelAccountEditView(View):
     @login_required(admin=True)
     def get(self, request, id):
+        """跳转到渠道账号编辑页面"""
         account = ChannelAccount.objects.get(id=id)
         channel_list = Channel.objects.order_by('-create_at')
         return render(request, 'channel-account-edit.html', {'account': account, 'channel_list': channel_list})
 
     @login_required(admin=True)
     def post(self, request, id):
+        """ajax渠道账号编辑处理"""
         account = ChannelAccount.objects.get(id=id)
         if not account:
             return response_error('账号不存在')
@@ -222,11 +241,13 @@ class ChannelAccountEditView(View):
 class ChannelAccountModifyPasswordView(View):
     @login_required(admin=True)
     def get(self, request, id):
+        """跳转到渠道账号修改密码页面"""
         account = ChannelAccount.objects.get(id=id)
         return render(request, 'channel-account-password.html', {'account': account})
 
     @login_required(admin=True)
     def post(self, request, id):
+        """ajax渠道账号密码修改处理"""
         account = ChannelAccount.objects.get(id=id)
         if not account:
             return response_error('账号不存在')
@@ -241,6 +262,7 @@ class ChannelAccountModifyPasswordView(View):
 class ChannelAccountDeleteView(View):
     @login_required(admin=True)
     def post(self, request):
+        """ajax渠道账号删除处理，可以批量"""
         ids = json.loads(request.POST.get('ids'))
         ChannelAccount.objects.filter(id__in=ids).delete()
         return response_success()
@@ -248,6 +270,7 @@ class ChannelAccountDeleteView(View):
 
 class ChannelOrderListView(View):
     def get(self, request, page=1):
+        """跳转到渠道订单列表页面，可以根据时间范围和渠道名称进行筛选"""
         data = request.GET
         start_date = data.get('start_date')
         end_date = data.get('end_date')
@@ -264,6 +287,7 @@ class ChannelOrderListView(View):
         channel_order_list = ChannelOrder.objects.filter(**dict_filter).order_by('-create_at')
         paginator = Paginator(channel_order_list, 15)
         channel_order_list = paginator.get_page(page)
+        # 从user表查询对应的手机号码和真实姓名添加到订单对象中
         if channel_order_list:
             user_ids = [order.user_id for order in channel_order_list]
             user_list = user_db.get_by_ids(user_ids)
@@ -277,12 +301,14 @@ class ChannelOrderListView(View):
 
 class ChannelPromotionView(View):
     def get(self, request, code):
+        """跳转到渠道推广页面"""
         channel = Channel.objects.filter(code=code).first()
         if not channel:
             return HttpResponse(status=404)
         return render(request, 'channel-promotion.html')
 
     def post(self, request, code):
+        """ajax渠道推广页面注册处理"""
         tel = request.POST.get('tel')
         verification_code = request.POST.get('verification_code')
         # password = request.POST.get('password')
@@ -309,17 +335,22 @@ class ChannelPromotionView(View):
         # 验证 验证码 是否正确
         if sms.verification_code != verification_code:
             sms.verification_time = now
+            sms.state = Sms.VERIFICATION_FAIL  # 修改短信状态为验证失败
             sms.save()
             return response_error('验证码错误，请5秒后重新验证')
         # 添加用户
         user_id = user_db.add_user(tel)
         # 添加渠道订单
         ChannelOrder.objects.create(channel=channel, user_id=user_id)
+        # 修改短信状态为验证成功
+        sms.state = Sms.VERIFICATION_SUCCESS
+        sms.save()
         return response_success()
 
 
 class SendVerificationCodeSmsView(View):
     def post(self, request):
+        """ajax渠道推广页面短信验证码发送"""
         tel = request.POST.get('tel')
         # 检查手机号格式
         if not re.match(r'\d{11}$', tel):
@@ -336,8 +367,8 @@ class SendVerificationCodeSmsView(View):
         text = '您的验证码是%s' % verification_code
         state = Sms.SEND_FAIL
         # 调用发送短信接口，判断是否发送成功，修改state
-        response = sms_api.send_sms(text, tel)
-        # response = b'20110725160412,0\n1234567890100'
+        # response = sms_api.send_sms(text, tel)
+        response = b'20110725160412,0\n1234567890100'  # TODO 暂时模拟成功结果
         result = re.split(r'\\n|,', str(response.decode('utf-8')))
         if result[1] == '0':
             state = Sms.SEND_SUCCESS
@@ -346,7 +377,3 @@ class SendVerificationCodeSmsView(View):
         Sms.objects.create(tel=tel, verification_code=verification_code, send_time=now,
                            valid_time=now + datetime.timedelta(minutes=5), state=state)
         return response_success()
-
-
-def jump(request):
-    return render(request, 'jump.html')

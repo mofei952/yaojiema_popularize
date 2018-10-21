@@ -13,7 +13,6 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-# from django.contrib import admin
 from django.conf.urls import url, static
 from django.urls import path
 
@@ -21,7 +20,6 @@ from pop import views
 from yaojiema_popularize import settings
 
 urlpatterns = [
-    # path('admin/', admin.site.urls),
     path('login', views.LoginView.as_view(), name='login'),
     path('', views.IndexView.as_view(), name='index'),
     path('logout', views.LogoutView.as_view(), name='logout'),
@@ -46,13 +44,8 @@ urlpatterns = [
     path('channel_promotion/<str:code>', views.ChannelPromotionView.as_view(), name='channel_promotion'),
     path('send_verification_code_sms', views.SendVerificationCodeSmsView.as_view(), name='send_verification_code_sms'),
 
-    path('jump', views.jump, name='jump'),
 ]
 
 
 if settings.DEBUG is False:
-    # urlpatterns += url(r'^media/(?P<path>.*)$', static.serve, {'document_root': settings.MEDIA_ROOT}, name='media'),
     urlpatterns += url(r'^static/(?P<path>.*)$', static.serve, {'document_root': settings.STATIC_ROOT }, name='static'),
-else:
-    # urlpatterns += static.static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-    pass

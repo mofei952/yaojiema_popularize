@@ -9,6 +9,7 @@ import hashlib
 import time
 from django.db import connection
 
+
 def get_by_ids(ids):
     ids = [str(id) for id in ids]
     cursor = connection.cursor()

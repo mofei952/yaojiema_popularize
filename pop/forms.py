@@ -38,7 +38,7 @@ class ChannelAccountAddForm(forms.ModelForm):
 
 
 class ChannelAccountEditForm(forms.ModelForm):
-    channel = forms.ModelChoiceField(Channel.objects,required=False)
+    channel = forms.ModelChoiceField(Channel.objects, required=False)
 
     class Meta:
         model = ChannelAccount
